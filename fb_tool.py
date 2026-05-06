@@ -1,92 +1,75 @@
-import requests
+import asyncio
 import time
 import os
+from playwright.async_api import async_playwright
+from playwright_stealth import stealth_async
 
 # --- Configuration ---
-INPUT_FILE = "numbers.txt"  # Put your numbers here
-LOG_FILE = "sent_logs.txt"  # Results will be saved here
-DELAY_BETWEEN_REQUESTS = 15 # Delay in seconds
+INPUT_FILE = "numbers.txt"
+DELAY_BETWEEN_ACCOUNTS = 20
 
-# Your New Access Token
-MY_ACCESS_TOKEN = "EAA13JdRf2RoBRfT5vVmOA6QcZAylOeVI1nPVnarJoUcKczkYU6zM3ZAXscFB8dvhm74dNoQ2fthDqo95qyKys2IlKZB3VPPLSHGrGlbEA8bkGIxb5dDTvRiCPKuz6WZCryUdlMqt6gMQZBg7sx0DtupoQMhSfZCpkU2ldtZA8TSZCNEa2jeywDxCZBYKoxvoMahA35GZBip085Bklo3E5nKutIizj2AyW7NbLxD85J0AZDZD"
-
-def send_fb_otp(phone_number):
-    print(f"\n[!] Processing: {phone_number}")
-    
-    # Facebook Mobile API Registration Endpoint
-    url = "https://b-api.facebook.com/method/user.register"
-    
-    headers = {
-        "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 14; Pixel 8 Pro Build/UQ1A.240205.002) [FBAN/MessengerLite;FBAV/350.0.0.12.100;FBPN/com.facebook.mlite;]",
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
-
-    # Registration Payload
-    payload = {
-        "email": phone_number,
-        "firstname": "Rahim",
-        "lastname": "Khan",
-        "gender": "MALE",
-        "birthday": "2000-01-01",
-        "password": "pass" + phone_number[-4:], 
-        "access_token": MY_ACCESS_TOKEN,
-        "format": "JSON"
-    }
-
-    try:
-        response = requests.post(url, data=payload, headers=headers)
+async def create_fb_account(phone):
+    async with async_playwright() as p:
+        print(f"\n[*] Starting automation for: {phone}")
         
-        # Checking if response is valid JSON
+        # Termux এর জন্য Chromium পাথ সেট করা
+        browser = await p.chromium.launch(
+            executable_path='/usr/bin/chromium', # Termux Chromium Path
+            headless=True # মোবাইল রিসোর্স বাঁচাতে ব্যাকগ্রাউন্ডে চলবে
+        )
+        
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
+        )
+        
+        page = await context.new_page()
+        await stealth_async(page) # ফেসবুক যাতে বট ধরতে না পারে
+        
         try:
-            response_data = response.json()
-        except:
-            print(f"[-] Error: Invalid response from server for {phone_number}")
-            return "INVALID_RESPONSE"
+            # ফেসবুক রেজিস্ট্রেশন পেজে যাওয়া
+            await page.goto("https://m.facebook.com/reg/", wait_until="networkidle")
+            await asyncio.sleep(2)
 
-        if response.status_code == 200:
-            print(f"[+] Success: OTP request sent to {phone_number}")
-            return "SUCCESS"
-        else:
-            error_msg = response_data.get("error_msg", "Unknown Error")
-            print(f"[-] Failed for {phone_number}: {error_msg}")
-            return f"FAILED ({error_msg})"
+            # তথ্য পূরণ
+            await page.fill('input[name="firstname"]', "Rahim")
+            await page.fill('input[name="lastname"]', "Khan")
+            await page.fill('input[name="reg_email__"]', phone)
             
-    except Exception as e:
-        print(f"[-] System Error: {e}")
-        return "SYSTEM_ERROR"
+            # লিঙ্গ নির্বাচন (Male)
+            await page.click('input[value="2"]')
+            
+            # পাসওয়ার্ড
+            password = "Pass" + phone[-4:]
+            await page.fill('input[name="reg_passwd__"]', password)
+            
+            # সাইন আপ বাটনে ক্লিক
+            await page.click('button[name="submit"]')
+            
+            print(f"[+] Success: OTP request sent for {phone}")
+            await asyncio.sleep(5) # ওটিপি ট্রিগার হওয়ার জন্য সামান্য অপেক্ষা
+            
+        except Exception as e:
+            print(f"[-] Error for {phone}: {e}")
+        
+        finally:
+            await browser.close()
 
-def main():
-    # File Check
+async def main():
     if not os.path.exists(INPUT_FILE):
-        print(f"[-] Error: '{INPUT_FILE}' not found!")
-        print("[!] Please create a 'numbers.txt' file in this folder.")
+        print("[-] Error: numbers.txt not found!")
         return
 
-    # Loading Numbers
     with open(INPUT_FILE, "r") as f:
         numbers = [line.strip() for line in f if line.strip()]
 
-    if not numbers:
-        print("[-] No numbers found in the file.")
-        return
-
-    print(f"[*] Total {len(numbers)} numbers found. Starting process...")
-    print("-" * 40)
+    print(f"[*] Found {len(numbers)} numbers. Starting Android Automation...")
 
     for index, num in enumerate(numbers):
-        status = send_fb_otp(num)
+        await create_fb_account(num)
         
-        # Saving results to log
-        with open(LOG_FILE, "a") as log:
-            log.write(f"Time: {time.ctime()} | Number: {num} | Status: {status}\n")
-        
-        # Delay logic
         if index < len(numbers) - 1:
-            print(f"[*] Waiting {DELAY_BETWEEN_REQUESTS} seconds for next number...")
-            time.sleep(DELAY_BETWEEN_REQUESTS)
-
-    print("-" * 40)
-    print("[★] Task Completed! Check 'sent_logs.txt' for details.")
+            print(f"[*] Waiting {DELAY_BETWEEN_ACCOUNTS} seconds...")
+            await asyncio.sleep(DELAY_BETWEEN_ACCOUNTS)
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
