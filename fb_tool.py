@@ -5,7 +5,7 @@ import random
 
 # --- Configuration ---
 INPUT_FILE = "numbers.txt"
-DELAY = 25  # Block এড়াতে ২৫ সেকেন্ড বিরতি জরুরি
+DELAY = 60  # Block এড়াতে ২৫ সেকেন্ড বিরতি জরুরি
 
 def trigger_otp(phone):
     print(f"\n[*] Sending OTP request to: {phone}")
