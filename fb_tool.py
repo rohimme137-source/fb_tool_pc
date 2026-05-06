@@ -8,7 +8,7 @@ LOG_FILE = "sent_logs.txt"  # কাজের রেজাল্ট এখান
 DELAY_BETWEEN_REQUESTS = 15 # এক নাম্বারের পর ১৫ সেকেন্ড বিরতি
 
 # আপনার দেওয়া লেটেস্ট টোকেন
-MY_ACCESS_TOKEN = "EAA13JdRf2RoBRXI9f2O4pMuXWE77AtSWB2bOZCMUeujwuppGHQFo8hsZCiB4eVQxOGnvQDHXEKSI4Yc2musGcVo8u2hbzkCrjq4KKQMeZBajl6Rq6fJb114wUJBotYWrFhWZBZCxuHQZCRjqTd6xZCM9c4NK2XTUvlLyxdseGZAT4Sm9P0nTMcweFg8vuZAXZC2YPaEZBlLtrCvLLMLHuYBqDBZALFZB2ZBh6Bwbn83uYKLgZDZD"
+MY_ACCESS_TOKEN = "EAA13JdRf2RoBRfT5vVmOA6QcZAylOeVI1nPVnarJoUcKczkYU6zM3ZAXscFB8dvhm74dNoQ2fthDqo95qyKys2IlKZB3VPPLSHGrGlbEA8bkGIxb5dDTvRiCPKuz6WZCryUdlMqt6gMQZBg7sx0DtupoQMhSfZCpkU2ldtZA8TSZCNEa2jeywDxCZBYKoxvoMahA35GZBip085Bklo3E5nKutIizj2AyW7NbLxD85J0AZDZD"
 
 def send_fb_otp(phone_number):
     print(f"\n[!] প্রসেস করা হচ্ছে: {phone_number}")
