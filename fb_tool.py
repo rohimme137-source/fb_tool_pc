@@ -1,75 +1,67 @@
-import asyncio
+import requests
 import time
 import os
-from playwright.async_api import async_playwright
-from playwright_stealth import stealth_async
+import random
 
-# --- Configuration ---
 INPUT_FILE = "numbers.txt"
-DELAY_BETWEEN_ACCOUNTS = 20
+DELAY = 25  # ফেসবুকের ব্লক এড়াতে ২৫ সেকেন্ড গ্যাপ
 
-async def create_fb_account(phone):
-    async with async_playwright() as p:
-        print(f"\n[*] Starting automation for: {phone}")
-        
-        # Termux এর জন্য Chromium পাথ সেট করা
-        browser = await p.chromium.launch(
-            executable_path='/usr/bin/chromium', # Termux Chromium Path
-            headless=True # মোবাইল রিসোর্স বাঁচাতে ব্যাকগ্রাউন্ডে চলবে
-        )
-        
-        context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
-        )
-        
-        page = await context.new_page()
-        await stealth_async(page) # ফেসবুক যাতে বট ধরতে না পারে
-        
-        try:
-            # ফেসবুক রেজিস্ট্রেশন পেজে যাওয়া
-            await page.goto("https://m.facebook.com/reg/", wait_until="networkidle")
-            await asyncio.sleep(2)
+def send_request(phone):
+    print(f"\n[*] Sending request to: {phone}")
+    
+    url = "https://m.facebook.com/reg/submit/"
+    
+    # ব্রাউজারের মতো হেডার সেট করা
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Origin': 'https://m.facebook.com',
+        'Referer': 'https://m.facebook.com/reg/',
+    }
 
-            # তথ্য পূরণ
-            await page.fill('input[name="firstname"]', "Rahim")
-            await page.fill('input[name="lastname"]', "Khan")
-            await page.fill('input[name="reg_email__"]', phone)
-            
-            # লিঙ্গ নির্বাচন (Male)
-            await page.click('input[value="2"]')
-            
-            # পাসওয়ার্ড
-            password = "Pass" + phone[-4:]
-            await page.fill('input[name="reg_passwd__"]', password)
-            
-            # সাইন আপ বাটনে ক্লিক
-            await page.click('button[name="submit"]')
-            
-            print(f"[+] Success: OTP request sent for {phone}")
-            await asyncio.sleep(5) # ওটিপি ট্রিগার হওয়ার জন্য সামান্য অপেক্ষা
-            
-        except Exception as e:
-            print(f"[-] Error for {phone}: {e}")
-        
-        finally:
-            await browser.close()
+    # রেজিস্ট্রেশন ডাটা
+    data = {
+        'lsd': 'AVq5r...', # এটি অটো জেনারেট হয়, এখানে র্যান্ডম দিলেও চলে
+        'firstname': 'Rahim',
+        'lastname': 'Khan',
+        'reg_email__': phone,
+        'sex': '2', # Male
+        'birthday_day': '10',
+        'birthday_month': '05',
+        'birthday_year': '1998',
+        'reg_passwd__': 'Pass' + str(random.randint(1000, 9999)),
+        'submit': 'Sign Up'
+    }
 
-async def main():
+    try:
+        # সেশন ব্যবহার করা যাতে ফেসবুক মনে করে এটি একটি আসল ব্রাউজার
+        session = requests.Session()
+        response = session.post(url, data=data, headers=headers, timeout=15)
+        
+        if response.status_code == 200:
+            print(f"[+] Success: OTP trigger request sent to {phone}")
+        else:
+            print(f"[-] Failed: Server returned status {response.status_code}")
+            
+    except Exception as e:
+        print(f"[-] Network Error: {e}")
+
+def main():
     if not os.path.exists(INPUT_FILE):
-        print("[-] Error: numbers.txt not found!")
+        print(f"[-] Error: {INPUT_FILE} not found!")
         return
 
     with open(INPUT_FILE, "r") as f:
         numbers = [line.strip() for line in f if line.strip()]
 
-    print(f"[*] Found {len(numbers)} numbers. Starting Android Automation...")
+    print(f"[*] Total {len(numbers)} numbers. Let's go!")
+    print("-" * 30)
 
-    for index, num in enumerate(numbers):
-        await create_fb_account(num)
-        
-        if index < len(numbers) - 1:
-            print(f"[*] Waiting {DELAY_BETWEEN_ACCOUNTS} seconds...")
-            await asyncio.sleep(DELAY_BETWEEN_ACCOUNTS)
+    for num in numbers:
+        send_request(num)
+        time.sleep(DELAY)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
